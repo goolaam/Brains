@@ -3,184 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Chain Reaction: 20 Levels</title>
+    <title>TERMINAL BREACH: 30 LEVELS</title>
     <style>
         :root {
-            --bg: #1a1a2e;
-            --panel: #16213e;
-            --text: #e94560;
-            --accent: #0f3460;
+            --neon: #00ff41; /* Matrix Green */
+            --bg: #050505;
+            --warn: #ffcc00;
+            --crit: #ff0055;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg);
-            color: #fff;
+            color: var(--neon);
+            font-family: 'Courier New', monospace;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: center;
             padding: 20px;
+            overflow: hidden;
         }
+        /* Scanline Effect */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
         #game-container {
-            width: 100%;
-            max-width: 600px;
-            background: var(--panel);
+            width: 1000px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            border: 2px solid var(--neon);
             padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 0 15px var(--neon);
+            background: #0a0a0a;
+            position: relative;
         }
-        .header {
+
+        .stats-bar {
+            grid-column: span 2;
             display: flex;
             justify-content: space-between;
-            border-bottom: 2px solid var(--accent);
+            border-bottom: 2px solid var(--neon);
             padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        #scene-description {
-            font-size: 1.2rem;
-            line-height: 1.6;
-            margin-bottom: 20px;
-            min-height: 80px;
-        }
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        select, button {
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
             font-weight: bold;
         }
-        select { background: #fff; color: #333; }
-        button { background: var(--text); color: #fff; transition: 0.2s; }
-        button:hover { opacity: 0.8; transform: translateY(-2px); }
-        #inventory-display {
-            margin-top: 20px;
+
+        .inventory-panel {
+            border-right: 1px solid var(--neon);
+            padding-right: 15px;
+            height: 500px;
+            overflow-y: scroll;
+        }
+
+        .item-btn {
+            display: block;
+            width: 100%;
+            background: transparent;
+            color: var(--neon);
+            border: 1px solid var(--neon);
+            padding: 8px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            text-align: left;
+            transition: 0.3s;
+        }
+        .item-btn:hover { background: rgba(0, 255, 65, 0.2); }
+        .item-btn.active { background: var(--neon); color: #000; }
+
+        .main-display { padding: 10px; position: relative; }
+        #scene-text { height: 120px; font-size: 1.2rem; }
+        
+        .action-zone {
+            margin-top: 30px;
+            border-top: 1px dashed var(--neon);
+            padding-top: 20px;
+        }
+
+        #target-list {
+            background: #000;
+            color: var(--neon);
+            border: 1px solid var(--neon);
             padding: 10px;
-            background: var(--accent);
-            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .execute-btn {
+            width: 100%;
+            padding: 20px;
+            background: var(--neon);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        #log {
+            margin-top: 20px;
             font-size: 0.9rem;
+            height: 60px;
+            color: var(--warn);
         }
-        #message-log {
-            margin-top: 15px;
-            color: #aaa;
-            font-style: italic;
-            font-size: 0.85rem;
-            text-align: center;
+
+        .shake { animation: shake 0.5s; }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
         }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--neon); }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div class="header">
-            <span>Level: <strong id="level-num">1</strong>/20</span>
-            <span id="location-name">The Forest Edge</span>
-        </div>
-
-        <div id="scene-description">
-            A heavy boulder blocks the cave entrance. A sturdy wooden log lies nearby.
-        </div>
-
-        <div class="controls">
-            <select id="item-select">
-                <option value="">-- Use Item --</option>
-            </select>
-            <select id="target-select">
-                <option value="">-- On Target --</option>
-            </select>
-            <button onclick="attemptAction()" style="grid-column: span 2;">Execute Action</button>
-        </div>
-
-        <div id="inventory-display">Inventory: <span id="items-list">Log</span></div>
-        <div id="message-log">Can you find the way out?</div>
+<div id="game-container">
+    <div class="stats-bar">
+        <div>SYSTEM STATUS: ACTIVE</div>
+        <div>TIME REMAINING: <span id="timer">05:00</span></div>
+        <div>INTEGRITY: <span id="hp">100%</span></div>
+        <div>LVL: <span id="lvl-count">1</span>/30</div>
     </div>
 
+    <div class="inventory-panel" id="inv-panel">
+        </div>
+
+    <div class="main-display" id="stage">
+        <h2 id="lvl-title">LOADING...</h2>
+        <div id="scene-text">Initializing security nodes...</div>
+
+        <div class="action-zone">
+            <select id="target-list"></select>
+            <button class="execute-btn" onclick="processMove()">EXECUTE COMMAND</button>
+            <div id="log">> System ready. Select parameters.</div>
+        </div>
+    </div>
+</div>
+
 <script>
-    const levels = [
-        { n: 1, loc: "Forest", desc: "A heavy boulder blocks the cave entrance. A sturdy log lies nearby.", item: "Log", target: "Boulder", win: "You use the log as a lever to roll the stone away, revealing a key!", nextItem: "Silver Key" },
-        { n: 2, loc: "Cave Mouth", desc: "A locked iron gate stands in your way.", item: "Silver Key", target: "Iron Gate", win: "The key turns perfectly. The gate creaks open.", nextItem: "Empty Bucket" },
-        { n: 3, loc: "The Well", desc: "A deep well sits in the center of the room. You can see something shiny at the bottom but can't reach it.", item: "Empty Bucket", target: "Well", win: "You lower the bucket and scoop up a handful of wet Flint.", nextItem: "Flint" },
-        { n: 4, loc: "Dark Hallway", desc: "It's pitch black. Unlit torches line the walls. There's a pile of dry hay.", item: "Flint", target: "Dry Hay", win: "You strike the flint. The hay catches fire, lighting a torch!", nextItem: "Lit Torch" },
-        { n: 5, loc: "Frozen Door", desc: "The door handle is encased in thick magical ice.", item: "Lit Torch", target: "Ice", win: "The ice melts into a puddle, revealing a rusty Gear.", nextItem: "Rusty Gear" },
-        { n: 6, loc: "The Clockworks", desc: "A massive machine is missing a crucial component to move the bridge.", item: "Rusty Gear", target: "Machine", win: "The gears grind to life. The bridge lowers.", nextItem: "Long Rope" },
-        { n: 7, loc: "The Chasm", desc: "A wide gap prevents you from crossing. A sturdy hook hangs from the ceiling.", item: "Long Rope", target: "Hook", win: "You swing across like a pro! You land near a Magnetic Stone.", nextItem: "Magnetic Stone" },
-        { n: 8, loc: "The Grate", desc: "A small metal pin is stuck deep inside a narrow pipe where your fingers can't reach.", item: "Magnetic Stone", target: "Pipe", win: "The magnet pulls the pin out! It's actually a Lockpick.", nextItem: "Lockpick" },
-        { n: 9, loc: "Prison Cell", desc: "A sturdy wooden chest is double-locked.", item: "Lockpick", target: "Chest", win: "Click! Inside the chest you find a Jar of Grease.", nextItem: "Jar of Grease" },
-        { n: 10, loc: "Rusted Lever", desc: "A giant lever is stuck fast by years of rust. It needs to be pulled to open the floor hatch.", item: "Jar of Grease", target: "Lever", win: "The grease works wonders. You pull the lever and find a Glass Lens.", nextItem: "Glass Lens" },
-        { n: 11, loc: "The Library", desc: "A beam of light enters the room, but it's too weak to read the secret map on the wall.", item: "Glass Lens", target: "Beam of Light", win: "The lens focuses the light, burning a hole through the map to reveal a hidden Hammer.", nextItem: "Hammer" },
-        { n: 12, loc: "Bricked Wall", desc: "One brick looks loose, but it's wedged tight.", item: "Hammer", target: "Loose Brick", win: "You smash the brick! Behind it lies a pile of Meat.", nextItem: "Meat" },
-        { n: 13, loc: "The Kennel", desc: "A hungry, growling wolf blocks the staircase.", item: "Meat", target: "Wolf", win: "The wolf happily takes the snack and lets you pass. You find a File.", nextItem: "File" },
-        { n: 14, loc: "The Bars", desc: "Thin window bars are the only thing between you and the balcony.", item: "File", target: "Bars", win: "You saw through the bars. On the balcony, you find a Mirror.", nextItem: "Mirror" },
-        { n: 15, loc: "The Medusa Room", desc: "A stone statue blocks the path. Legend says it only moves if it sees its own reflection.", item: "Mirror", target: "Statue", win: "The statue turns to stone... wait, it was already stone. It crumbles! You find a Golden Seed.", nextItem: "Golden Seed" },
-        { n: 16, loc: "The Garden", desc: "An enchanted plot of soil sits under a magical sunlamp.", item: "Golden Seed", target: "Soil", win: "The seed grows instantly into a beanstalk! You climb up and find an Axe.", nextItem: "Axe" },
-        { n: 17, loc: "The Attic", desc: "Thick thorny vines cover the exit door.", item: "Axe", target: "Vines", win: "You chop through the thorns. Underneath is a bucket of Blue Paint.", nextItem: "Blue Paint" },
-        { n: 18, loc: "The Canvas", desc: "A magical painting of an ocean is missing its color, preventing you from 'entering' the world.", item: "Blue Paint", target: "Painting", win: "The painting comes to life! You step through and find a Trident.", nextItem: "Trident" },
-        { n: 19, loc: "Underwater Gate", desc: "A giant sea serpent guards the final portal. It only respects the symbol of the king.", item: "Trident", target: "Serpent", win: "The serpent bows and hands you the Final Emblem.", nextItem: "Final Emblem" },
-        { n: 20, loc: "The Final Door", desc: "The exit to the real world. It requires the Final Emblem to activate.", item: "Final Emblem", target: "Exit Door", win: "The door glows and opens. You are FREE!", nextItem: "Freedom" }
+    const items = ["Sledgehammer", "Lockpick", "Silk Rope", "Vial of Acid", "Golden Key", "Magnifying Glass", "Wooden Plank", "Steel File", "Heavy Grease", "Meat Scrap", "Small Magnet", "Glass Prism", "Flint & Steel", "Iron Crowbar", "Hand Drill", "Rubber Gloves", "Compass", "Jar of Honey", "Bag of Sand", "Metal Shield", "Whistle", "Blue Chalk", "Empty Bucket", "Pitchfork", "Silver Mirror", "Insulated Pliers", "Leather Belt", "Old Bone", "Bamboo Pole", "Diamond Cutter"];
+    
+    const gameData = [
+        { t: "The Barrier", d: "A granite boulder seals the hatch. It's wedged tight.", i: "Iron Crowbar", tr: "Granite Boulder" },
+        { t: "Fused Lock", d: "The padlock is a lump of rusted slag. No key will fit.", i: "Vial of Acid", tr: "Rusted Padlock" },
+        { t: "The Gap", d: "A floor plate is missing, leaving a 10ft drop into spikes.", i: "Wooden Plank", tr: "10ft Drop" },
+        { t: "Glittering Depths", d: "Something metallic is at the bottom of a narrow, dry pipe.", i: "Small Magnet", tr: "Narrow Pipe" },
+        { t: "The Guardian", d: "A cyber-hound blocks the corridor, sensors tracking you.", i: "Old Bone", tr: "Cyber-Hound" },
+        { t: "Fragile Wall", d: "The ventilation cover is bricked over with loose mortar.", i: "Sledgehammer", tr: "Bricked Vent" },
+        { t: "Laser Grid", d: "A single laser beam is blocking the door sensor.", i: "Silver Mirror", tr: "Laser Beam" },
+        { t: "Overhead Switch", d: "The power switch is 12 feet high in the rafters.", i: "Bamboo Pole", tr: "Power Switch" },
+        { t: "Live Terminal", d: "The keypad is sparking with high-voltage electricity.", i: "Rubber Gloves", tr: "Sparking Keypad" },
+        { t: "Bio-Lock", d: "The sensor requires a specific frequency to oscillate.", i: "Whistle", tr: "Frequency Sensor" },
+        { t: "Seized Gears", d: "The door gears are dry and screaming with friction.", i: "Heavy Grease", tr: "Dry Gears" },
+        { t: "Hidden Script", d: "The exit code is etched into a grain of sand on the desk.", i: "Magnifying Glass", tr: "Grain of Sand" },
+        { t: "Slippery Floor", d: "The floor is coated in frictionless gel. You can't move.", i: "Bag of Sand", tr: "Frictionless Gel" },
+        { t: "The Hungry Orc", d: "A dungeon guard is complaining about his missed lunch.", i: "Meat Scrap", tr: "Dungeon Guard" },
+        { t: "The Fire Door", d: "Flames are shooting from the wall. You need a heat break.", i: "Metal Shield", tr: "Wall Flames" },
+        { t: "The Dark Room", d: "It's pitch black. You need a primitive spark.", i: "Flint & Steel", tr: "Primitive Spark" },
+        { t: "Submerged Lever", d: "The lever is at the bottom of a tank of toxic sludge.", i: "Empty Bucket", tr: "Sludge Tank" },
+        { t: "The Glass Safe", d: "The master drive is behind 2-inch thick tempered glass.", i: "Diamond Cutter", tr: "Tempered Glass" },
+        { t: "Tangled Wires", d: "A mess of copper wires prevents the door from closing.", i: "Insulated Pliers", tr: "Copper Wires" },
+        { t: "The Loose Bar", d: "One iron bar in the cage is thinner than the rest.", i: "Steel File", tr: "Thin Iron Bar" },
+        { t: "The Giant Nut", d: "A massive hexagonal bolt needs to be turned.", i: "Leather Belt", tr: "Hexagonal Bolt" },
+        { t: "The Echo Chamber", d: "The sound-activated lock needs a distraction far away.", i: "Jar of Honey", tr: "Distant Wall" },
+        { t: "Deep Trench", d: "The key is at the bottom of a 30ft pit.", i: "Silk Rope", tr: "30ft Pit" },
+        { t: "The King's Gate", d: "A literal golden lock requires a literal golden match.", i: "Golden Key", tr: "Golden Lock" },
+        { t: "The Maze", d: "The corridors are identical. You need to mark your path.", i: "Blue Chalk", tr: "Identical Walls" },
+        { t: "Small Screw", d: "The panel is held by a tiny screw with no head.", i: "Hand Drill", tr: "No-head Screw" },
+        { t: "The Compass Room", d: "Magnetic interference makes you dizzy. Find True North.", i: "Compass", tr: "Magnetic Field" },
+        { t: "Bale Obstacle", d: "A giant bale of hay is blocking the conveyor belt.", i: "Pitchfork", tr: "Hay Bale" },
+        { t: "White Light", d: "A single beam needs to be split into a rainbow.", i: "Glass Prism", tr: "Single Beam" },
+        { t: "The Master Lock", d: "The final tumblers are exposed. Use your finest skill.", i: "Lockpick", tr: "Exposed Tumblers" }
     ];
 
-    let currentLevel = 0;
-    let inventory = ["Log"];
+    let currentLvl = 0;
+    let selectedItem = null;
+    let health = 100;
+    let timeLeft = 300;
 
-    const sceneDesc = document.getElementById('scene-description');
-    const levelNum = document.getElementById('level-num');
-    const locName = document.getElementById('location-name');
-    const itemSelect = document.getElementById('item-select');
-    const targetSelect = document.getElementById('target-select');
-    const invDisplay = document.getElementById('items-list');
-    const msgLog = document.getElementById('message-log');
-
-    function updateUI() {
-        const lvl = levels[currentLevel];
-        if (!lvl) return;
-
-        levelNum.innerText = lvl.n;
-        locName.innerText = lvl.loc;
-        sceneDesc.innerText = lvl.desc;
-        invDisplay.innerText = inventory.join(", ");
-
-        // Update dropdowns
-        itemSelect.innerHTML = '<option value="">-- Use Item --</option>';
-        inventory.forEach(item => {
-            itemSelect.innerHTML += `<option value="${item}">${item}</option>`;
+    function init() {
+        const panel = document.getElementById('inv-panel');
+        items.sort().forEach(item => {
+            const btn = document.createElement('button');
+            btn.className = 'item-btn';
+            btn.innerText = item;
+            btn.onclick = () => {
+                document.querySelectorAll('.item-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedItem = item;
+            };
+            panel.appendChild(btn);
         });
-
-        targetSelect.innerHTML = '<option value="">-- On Target --</option>';
-        const target = lvl.target;
-        targetSelect.innerHTML += `<option value="${target}">${target}</option>`;
+        loadLevel();
+        startTimer();
     }
 
-    function attemptAction() {
-        const selectedItem = itemSelect.value;
-        const selectedTarget = targetSelect.value;
-        const lvl = levels[currentLevel];
+    function loadLevel() {
+        const data = gameData[currentLvl];
+        document.getElementById('lvl-title').innerText = data.t;
+        document.getElementById('scene-text').innerText = data.d;
+        document.getElementById('lvl-count').innerText = currentLvl + 1;
+        
+        const target = document.getElementById('target-list');
+        target.innerHTML = `<option value="">-- SELECT TARGET --</option>
+                            <option value="${data.tr}">${data.tr}</option>
+                            <option value="Self">Attempt Manually</option>
+                            <option value="The Air">The Air</option>`;
+    }
 
-        if (selectedItem === lvl.item && selectedTarget === lvl.target) {
-            msgLog.innerText = lvl.win;
-            msgLog.style.color = "#4cd137";
-            
-            setTimeout(() => {
-                if (currentLevel < levels.length - 1) {
-                    inventory.push(lvl.nextItem);
-                    currentLevel++;
-                    updateUI();
-                    msgLog.innerText = "Level Cleared!";
-                    msgLog.style.color = "#aaa";
-                } else {
-                    sceneDesc.innerText = "CONGRATULATIONS! You have escaped the 20 levels of logic!";
-                    document.querySelector('.controls').style.display = 'none';
-                }
-            }, 2000);
+    function processMove() {
+        const data = gameData[currentLvl];
+        const target = document.getElementById('target-list').value;
+        const log = document.getElementById('log');
+
+        if (!selectedItem) {
+            log.innerText = "> ERROR: No item selected in Utility Belt.";
+            return;
+        }
+
+        if (selectedItem === data.i && target === data.tr) {
+            log.innerText = `> SUCCESS: ${selectedItem} used on ${target}. Proceeding...`;
+            currentLvl++;
+            if (currentLvl >= 30) {
+                winGame();
+            } else {
+                setTimeout(loadLevel, 1000);
+            }
         } else {
-            msgLog.innerText = "That doesn't seem to work here.";
-            msgLog.style.color = "#e94560";
+            health -= 10;
+            document.getElementById('hp').innerText = health + "%";
+            document.getElementById('game-container').classList.add('shake');
+            log.innerText = `> CRITICAL FAILURE: Anti-tamper triggered! -10% Integrity.`;
+            setTimeout(() => document.getElementById('game-container').classList.remove('shake'), 500);
+            if (health <= 0) gameOver("SYSTEM CRITICAL FAILURE");
         }
     }
 
-    updateUI();
+    function startTimer() {
+        const timerInt = setInterval(() => {
+            timeLeft--;
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
+            document.getElementById('timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            if (timeLeft <= 0) {
+                clearInterval(timerInt);
+                gameOver("TIME EXPIRED");
+            }
+        }, 1000);
+    }
+
+    function gameOver(reason) {
+        document.getElementById('stage').innerHTML = `<h1 style="color:var(--crit)">${reason}</h1><button onclick="location.reload()">REBOOT SYSTEM</button>`;
+    }
+
+    function winGame() {
+        document.getElementById('stage').innerHTML = `<h1 style="color:var(--neon)">VAULT BREACHED. FREEDOM ATTAINED.</h1><p>You completed 30 nodes of logic.</p>`;
+    }
+
+    init();
 </script>
 </body>
 </html>
